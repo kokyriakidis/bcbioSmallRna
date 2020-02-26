@@ -58,7 +58,7 @@ loadSmallRnaRun <- function(
     project_dir_pattern <- "^(\\d{4}-\\d{2}-\\d{2})_([^/]+)$"
     project_dir <- projectDir
     message(project_dir)
-    match <- str_match(project_dir, project_dir_pattern)
+    match <- str_match(basename(project_dir), project_dir_pattern)
     run_date <- match[[2L]] %>% as.Date
     template <- match[[3L]]
 
@@ -71,24 +71,44 @@ loadSmallRnaRun <- function(
     }
     message("Reading project summary YAML")
     csv <- read.csv(csv_file, row.names = 1L, check.names = FALSE)
-    csv <- csv[,apply(!is.na(csv), 2, all)]
-    
-    # colData ====
-    if (is.null(colData)){
-        col_data <- csv
-    }else{
-        col_data <- as.data.frame(colData)
-    }
-    col_data[["sample"]] <- rownames(col_data)
-    message(paste(names(col_data)))
-    stopifnot(interestingGroups %in% names(col_data))
-
-    # Sample names ====
-    # Obtain the samples (and their directories) from the YAML
-    sample_names <- row.names(csv)
-    col_data <- col_data[intersect(sample_names, rownames(col_data)),,drop=FALSE]
-    if (length(sample_names) == 0){
-        stop("No overlap between metadata rownames and files in final bcbio folder.")
+    if (length(colnames(csv)) == 3 & all(is.na(csv$batch)) & all(is.na(csv$phenotype))) {
+        # colData ====
+        if (is.null(colData)){
+            col_data <- csv
+        }else{
+            col_data <- as.data.frame(colData)
+        }
+        col_data[["sample"]] <- rownames(col_data)
+        message(paste(names(col_data)))
+        stopifnot(interestingGroups %in% names(col_data))
+  
+        # Sample names ====
+        # Obtain the samples (and their directories) from the YAML
+        sample_names <- row.names(csv)
+        col_data <- col_data[intersect(sample_names, rownames(col_data)),,drop=FALSE]
+        if (length(sample_names) == 0){
+            stop("No overlap between metadata rownames and files in final bcbio folder.")
+        }
+        col_data <- col_data[,-2:-3]
+    } else {
+        csv <- csv[,apply(!is.na(csv), 2, all)]
+        # colData ====
+        if (is.null(colData)){
+            col_data <- csv
+        }else{
+            col_data <- as.data.frame(colData)
+        }
+        col_data[["sample"]] <- rownames(col_data)
+        message(paste(names(col_data)))
+        stopifnot(interestingGroups %in% names(col_data))
+  
+        # Sample names ====
+        # Obtain the samples (and their directories) from the YAML
+        sample_names <- row.names(csv)
+        col_data <- col_data[intersect(sample_names, rownames(col_data)),,drop=FALSE]
+        if (length(sample_names) == 0){
+            stop("No overlap between metadata rownames and files in final bcbio folder.")
+        }
     }
     sample_dirs <- file.path(upload_dir, sample_names) %>%
         set_names(sample_names)
